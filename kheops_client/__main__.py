@@ -235,7 +235,9 @@ def _parse_args():
     _add_general_opts(parser_down)
     return parser.parse_args()
 
-
-if __name__ == "__main__":
+def main():
     args = _parse_args()
     args.func(args)
+
+if __name__ == "__main__":
+    main()

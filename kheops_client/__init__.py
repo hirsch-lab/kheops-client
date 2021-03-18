@@ -1,4 +1,4 @@
 __version__ = "0.1.0"
-__author__ = "normanius"
+__author__ = "Norman Juchler"
 
-from .client import KheopsClient
+from ._client import KheopsClient

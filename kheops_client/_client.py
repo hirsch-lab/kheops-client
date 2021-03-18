@@ -7,7 +7,7 @@ import pydicom as dicom
 from pathlib import Path
 from collections import defaultdict
 from dicomweb_client.api import DICOMwebClient
-from .utils import *
+from ._utils import *
 
 try:
     import progressbar as pg
