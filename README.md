@@ -155,8 +155,8 @@ client.search_and_download_series(...)
 
 
 ## Further reading
-[DICOM standard](https://www.dicomstandard.org/current)
-[DICOM dictionary browser](https://dicom.innolitics.com/ciods)
-[DICOMWeb standard](https://www.dicomstandard.org/dicomweb)
-[Pydicom](https://pydicom.github.io/) ([docs](https://pydicom.github.io/pydicom/stable/), [api docs](https://dicomweb-client.readthedocs.io/en/latest/package.html#), [github](https://github.com/pydicom/pydicom))
+[DICOM standard](https://www.dicomstandard.org/current)  
+[DICOM dictionary browser](https://dicom.innolitics.com/ciods)  
+[DICOMWeb standard](https://www.dicomstandard.org/dicomweb)  
+[Pydicom](https://pydicom.github.io/) ([docs](https://pydicom.github.io/pydicom/stable/), [api docs](https://dicomweb-client.readthedocs.io/en/latest/package.html#), [github](https://github.com/pydicom/pydicom))  
 [DICOMWeb client for python](https://dicomweb-client.readthedocs.io/en/latest/) ([github](https://github.com/mghcomputationalpathology/dicomweb-client))
