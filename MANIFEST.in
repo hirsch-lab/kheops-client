@@ -1,0 +1,10 @@
+include setup.py
+include setup.cfg
+include MANIFEST.in
+include LICENSE
+include README.md
+
+graft kheops_client
+
+exclude **/.DS_Store
+exclude **/__pycache__/**
