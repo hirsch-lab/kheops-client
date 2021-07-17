@@ -64,6 +64,7 @@ def run_client(args):
                                      fuzzy=args.fuzzy,
                                      offset=args.offset,
                                      limit=args.limit,
+                                     in_file=args.in_file,
                                      out_dir=args.out_dir)
         elif args.command=="download" and args.study_uid and args.series_uid:
             logger.debug("Action: download single series")
@@ -76,10 +77,11 @@ def run_client(args):
             logger.debug("Action: download multiple series")
             client.search_and_download_series(search_filters=filters,
                                               meta_only=args.meta_only,
-                                              out_dir=args.out_dir,
                                               limit=args.limit,
                                               offset=args.offset,
                                               fuzzy=args.fuzzy,
+                                              in_file=args.in_file,
+                                              out_dir=args.out_dir,
                                               forced=args.forced)
         else:
             assert False
@@ -90,6 +92,7 @@ def run_client(args):
                                       fuzzy=args.fuzzy,
                                       offset=args.offset,
                                       limit=args.limit,
+                                      in_file=args.in_file,
                                       out_dir=args.out_dir)
         elif args.command=="download" and args.study_uid:
             logger.debug("Action: download single study")
@@ -101,10 +104,11 @@ def run_client(args):
             logger.debug("Action: download multiple studies")
             client.search_and_download_studies(search_filters=filters,
                                                meta_only=args.meta_only,
-                                               out_dir=args.out_dir,
                                                limit=args.limit,
                                                offset=args.offset,
                                                fuzzy=args.fuzzy,
+                                               in_file=args.in_file,
+                                               out_dir=args.out_dir,
                                                forced=args.forced)
         else:
             assert False
@@ -149,6 +153,10 @@ def _add_args(parser):
                                help="Limit maximum number of results")
     parser_group2.add_argument("--offset", default=None, type=int,
                                help="Number of results that should be skipped")
+    parser_group2.add_argument("--in-file", default=None, type=str,
+                               help=("Path to a .csv with query results. "
+                                     "Useful to download a predefined list "
+                                     "of series or studies."))
 
     parser_group3 = parser.add_argument_group("I/O options")
     parser_group3.add_argument("-o", "--out-dir", default="./downloads",
@@ -199,7 +207,7 @@ def _add_subsubparsers(parser, command, formatter):
 
 def _parse_args():
     # kheops_client list series
-    # kheops_client list studies
+    # kheops_client list studies
     # kheops_client download series
     # kheops_client download studies
     formatter = argparse.RawTextHelpFormatter

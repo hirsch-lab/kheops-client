@@ -165,9 +165,9 @@ class KheopsClient:
         file_sizes = df.get("FileSize", empty.copy()).sum()
         modalities1 = df.get("Modality", empty.copy()).unique()
         modalities2 = df.get("ModalitiesInStudy", empty.copy())
-        # modalities2 can have the following shape:
+        # modalities2 can have the following shape:
         #       [ ["CT", "XA"], "CT", ["MR", "CT"] ]
-        # Note the mixing of lists and strings. To be correct: it's not
+        # Note the mixing of lists and strings. To be correct: it's not
         # actually a list, it's a pydicom.multival.MultiValue.
         # Goal: Flatten the list
         #       [ "CT", "XA", "CT", "MR", "CT" ]
@@ -276,7 +276,18 @@ class KheopsClient:
                       search_filters,
                       fuzzy=True,
                       limit=None,
-                      offset=None):
+                      offset=None,
+                      in_file=None):
+        if in_file:
+            df = pd.read_csv(in_file)
+            if ("StudyInstanceUID" not in df or
+                "SeriesInstanceUID" not in df):
+                msg = ("The input table must provide columns "
+                       "'StudyInstanceUID' and 'SeriesInstanceUID'. "
+                       "Check input file: %s")
+                raise RuntimeError(msg % in_file)
+            return df
+
         studies = self._query_studies(search_filters=search_filters,
                                       fuzzy=fuzzy,
                                       limit=limit,
@@ -301,7 +312,16 @@ class KheopsClient:
                        search_filters=None,
                        fuzzy=True,
                        limit=None,
-                       offset=None):
+                       offset=None,
+                       in_file=None):
+        if in_file:
+            df = pd.read_csv(in_file)
+            if "StudyInstanceUID" not in df:
+                msg = ("The input table must provide a column "
+                       "'StudyInstanceUID'. Check the input file: %s")
+                raise RuntimeError(msg % in_file)
+            return df
+
         studies = self._client.search_for_studies(search_filters=search_filters,
                                                   fuzzymatching=fuzzy,
                                                   limit=limit,
@@ -358,12 +378,14 @@ class KheopsClient:
                      fuzzy=True,
                      limit=None,
                      offset=None,
+                     in_file=None,
                      out_dir=None):
         self._logger.info("List studies...")
         df = self._query_studies(search_filters=search_filters,
                                  fuzzy=fuzzy,
                                  limit=limit,
-                                 offset=offset)
+                                 offset=offset,
+                                 in_file=in_file)
         self._print_list(lst=df["StudyInstanceUID"],
                          label="Available studies")
         self._print_table_summary(df)
@@ -376,12 +398,14 @@ class KheopsClient:
                     fuzzy=True,
                     limit=None,
                     offset=None,
+                    in_file=None,
                     out_dir=None):
         self._logger.info("List series...")
         df = self._query_series(search_filters=search_filters,
                                 fuzzy=fuzzy,
                                 limit=limit,
-                                offset=offset)
+                                offset=offset,
+                                in_file=in_file)
         self._print_list(lst=df["SeriesInstanceUID"],
                          label="Available series")
         self._print_table_summary(df)
@@ -443,6 +467,7 @@ class KheopsClient:
                                     fuzzy=True,
                                     limit=None,
                                     offset=None,
+                                    in_file=None,
                                     out_dir=None,
                                     forced=False):
         """
@@ -455,6 +480,10 @@ class KheopsClient:
             fuzzy:         Enable fuzzy search semantics
             limit:         Limit the number or results
             offset:        Number of results that should be skipped
+            in_file:       Path to a table containing the studies to download.
+                           The table must provide a column "StudyInstanceUID".
+                           Query arguments (search_filters, limit, etc.) will
+                           be ignored if in_file is not None.
             out_dir:       Output directory
             forced:        Do not overwrite any existing files / folders
 
@@ -463,7 +492,8 @@ class KheopsClient:
         df = self._query_studies(search_filters=search_filters,
                                  fuzzy=fuzzy,
                                  limit=limit,
-                                 offset=offset)
+                                 offset=offset,
+                                 in_file=in_file)
         self._logger.info("Number of studies found: %d", len(df))
         if len(df)==0:
             return
@@ -497,6 +527,7 @@ class KheopsClient:
                                    fuzzy=True,
                                    limit=None,
                                    offset=None,
+                                   in_file=None,
                                    out_dir=None,
                                    forced=False):
         """
@@ -509,6 +540,11 @@ class KheopsClient:
             fuzzy:         Enable fuzzy search semantics
             limit:         Limit the number or results
             offset:        Number of results that should be skipped
+            in_file:       Path to a table containing the studies to download.
+                           The table must provide columns "StudyInstanceUID"
+                           and "SeriesInstanceUID". Query arguments (e.g.,
+                           search_filters, limit, etc.) will be ignored if
+                           in_file is not None.
             out_dir:       Output directory
             forced:        Do not overwrite any existing files / folders
 
@@ -517,7 +553,8 @@ class KheopsClient:
         df = self._query_series(search_filters=search_filters,
                                 fuzzy=fuzzy,
                                 limit=limit,
-                                offset=offset)
+                                offset=offset,
+                                in_file=in_file)
         self._logger.info("Number of series found: %d", len(df))
         if len(df) == 0:
             return
