@@ -111,7 +111,7 @@ class KheopsClient:
                 widgets.append(pg.BouncingBar())
             show_bar = (self._show_progress and not suppress_progress)
             ProgressBarType = pg.ProgressBar if show_bar else pg.NullBar
-            if threaded:
+            if threaded and show_bar:
                 from threading import Timer
                 class RepeatTimer(Timer):
                     def run(self):
@@ -135,7 +135,9 @@ class KheopsClient:
                         return super().finish(*args, **kwargs)
                 ProgressBarType = ThreadedProgressBar
 
-            progress = ProgressBarType(max_value=size, widgets=widgets)
+            progress = ProgressBarType(max_value=size,
+                                       widgets=widgets,
+                                       poll_interval=0.02)
             return progress
 
     def _ensure_ouput_dir(self, out_dir, forced=True):
@@ -335,8 +337,10 @@ class KheopsClient:
     def _retrieve_single_series(self,
                                 study_uid,
                                 series_uid,
-                                meta_only):
+                                meta_only,
+                                suppress_progress=False):
         progress = self._get_progress(label="Downloading series...",
+                                      suppress_progress=suppress_progress,
                                       threaded=True)
         progress.start()
         if meta_only:
@@ -356,8 +360,11 @@ class KheopsClient:
 
     def _retrieve_single_study(self,
                                study_uid,
-                               meta_only):
+                               meta_only,
+                               suppress_progress=False):
+
         progress = self._get_progress(label="Downloading study...",
+                                      suppress_progress=suppress_progress,
                                       threaded=True)
         progress.start()
         if meta_only:
@@ -503,7 +510,8 @@ class KheopsClient:
         for i, row  in df.iterrows():
             study_uid = row["StudyInstanceUID"]
             dicoms = self._retrieve_single_study(study_uid=study_uid,
-                                                 meta_only=meta_only)
+                                                 meta_only=meta_only,
+                                                 suppress_progress=True)
             progress.update(i)
             df = self._write_instances(out_dir=out_dir,
                                        instances=dicoms,
@@ -567,7 +575,8 @@ class KheopsClient:
             series_uid = row["SeriesInstanceUID"]
             dicoms = self._retrieve_single_series(study_uid=study_uid,
                                                   series_uid=series_uid,
-                                                  meta_only=meta_only)
+                                                  meta_only=meta_only,
+                                                  suppress_progress=True)
             progress.update(i)
             df = self._write_instances(out_dir=out_dir,
                                        instances=dicoms,
