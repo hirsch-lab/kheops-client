@@ -178,10 +178,11 @@ class KheopsClient:
                 return tuple([x])
             else:
                 return tuple(x)
-        modalities2 = modalities2.map(_map).unique()
         from itertools import chain
+        modalities2 = modalities2.map(_map).unique()
         modalities2 = set(chain(*modalities2))
-        modalities = set(modalities1) | set(modalities2)
+        modalities = (set(map(str.strip, modalities1)) |
+                      set(map(str.strip, modalities2)))
         modalities = list(sorted(modalities))
         print()
         print("Summary:")
@@ -272,6 +273,7 @@ class KheopsClient:
         series = dicomize_json_results(series)
         df = dicoms_to_frame(series, keywords=self.SERIES_KEYS)
         df = sort_frame_by_uid(df, by="SeriesInstanceUID")
+        df = strip_strings(df=df)
         return df
 
     def _query_series(self,
@@ -308,6 +310,7 @@ class KheopsClient:
         progress.finish()
         series = pd.concat(series, axis=0)
         series = sort_frame_by_uid(series, by="SeriesInstanceUID")
+        series = strip_strings(df=series)
         return series
 
     def _query_studies(self,
@@ -332,6 +335,7 @@ class KheopsClient:
         studies = dicomize_json_results(studies)
         df = dicoms_to_frame(studies, keywords=self.STUDY_KEYS)
         df = sort_frame_by_uid(df, by="StudyInstanceUID")
+        df = strip_strings(df=df)
         return df
 
     def _retrieve_single_series(self,
