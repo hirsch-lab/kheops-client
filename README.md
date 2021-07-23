@@ -134,6 +134,16 @@ kheops-client download studies \
     --forced
 ```
 
+It is possible to download a list of previously selected studies/series by passing a .csv file. The table must contain a named column "StudyInstanceUID" for the "studies" mode, and additionally a column "SeriesInstanceUID" for the "series" mode.
+
+```bash
+kheops-client download studies \
+    --url "$URL" \
+    --token "$ACCESS_TOKEN" \
+    --out-dir "$OUT_DIR" \
+    --in-file "path/to/file/patients_oldest_cta.csv"
+```
+
 #### Further arguments/options
 - For testing, it may be useful to limit the maximum number of studies and to specify an offset: `--limit` and `--offset`
 - Option `--dry-run` runs the commands without writing any output data
