@@ -111,7 +111,7 @@ class KheopsClient:
                 widgets.append(pg.BouncingBar())
             show_bar = (self._show_progress and not suppress_progress)
             ProgressBarType = pg.ProgressBar if show_bar else pg.NullBar
-            if threaded:
+            if threaded and show_bar:
                 from threading import Timer
                 class RepeatTimer(Timer):
                     def run(self):
@@ -135,7 +135,9 @@ class KheopsClient:
                         return super().finish(*args, **kwargs)
                 ProgressBarType = ThreadedProgressBar
 
-            progress = ProgressBarType(max_value=size, widgets=widgets)
+            progress = ProgressBarType(max_value=size,
+                                       widgets=widgets,
+                                       poll_interval=0.02)
             return progress
 
     def _ensure_ouput_dir(self, out_dir, forced=True):
@@ -165,9 +167,9 @@ class KheopsClient:
         file_sizes = df.get("FileSize", empty.copy()).sum()
         modalities1 = df.get("Modality", empty.copy()).unique()
         modalities2 = df.get("ModalitiesInStudy", empty.copy())
-        # modalities2 can have the following shape:
+        # modalities2 can have the following shape:
         #       [ ["CT", "XA"], "CT", ["MR", "CT"] ]
-        # Note the mixing of lists and strings. To be correct: it's not
+        # Note the mixing of lists and strings. To be correct: it's not
         # actually a list, it's a pydicom.multival.MultiValue.
         # Goal: Flatten the list
         #       [ "CT", "XA", "CT", "MR", "CT" ]
@@ -176,10 +178,11 @@ class KheopsClient:
                 return tuple([x])
             else:
                 return tuple(x)
-        modalities2 = modalities2.map(_map).unique()
         from itertools import chain
+        modalities2 = modalities2.map(_map).unique()
         modalities2 = set(chain(*modalities2))
-        modalities = set(modalities1) | set(modalities2)
+        modalities = (set(map(str.strip, modalities1)) |
+                      set(map(str.strip, modalities2)))
         modalities = list(sorted(modalities))
         print()
         print("Summary:")
@@ -270,13 +273,25 @@ class KheopsClient:
         series = dicomize_json_results(series)
         df = dicoms_to_frame(series, keywords=self.SERIES_KEYS)
         df = sort_frame_by_uid(df, by="SeriesInstanceUID")
+        df = strip_strings(df=df)
         return df
 
     def _query_series(self,
                       search_filters,
                       fuzzy=True,
                       limit=None,
-                      offset=None):
+                      offset=None,
+                      in_file=None):
+        if in_file:
+            df = pd.read_csv(in_file)
+            if ("StudyInstanceUID" not in df or
+                "SeriesInstanceUID" not in df):
+                msg = ("The input table must provide columns "
+                       "'StudyInstanceUID' and 'SeriesInstanceUID'. "
+                       "Check input file: %s")
+                raise RuntimeError(msg % in_file)
+            return df
+
         studies = self._query_studies(search_filters=search_filters,
                                       fuzzy=fuzzy,
                                       limit=limit,
@@ -295,13 +310,23 @@ class KheopsClient:
         progress.finish()
         series = pd.concat(series, axis=0)
         series = sort_frame_by_uid(series, by="SeriesInstanceUID")
+        series = strip_strings(df=series)
         return series
 
     def _query_studies(self,
                        search_filters=None,
                        fuzzy=True,
                        limit=None,
-                       offset=None):
+                       offset=None,
+                       in_file=None):
+        if in_file:
+            df = pd.read_csv(in_file)
+            if "StudyInstanceUID" not in df:
+                msg = ("The input table must provide a column "
+                       "'StudyInstanceUID'. Check the input file: %s")
+                raise RuntimeError(msg % in_file)
+            return df
+
         studies = self._client.search_for_studies(search_filters=search_filters,
                                                   fuzzymatching=fuzzy,
                                                   limit=limit,
@@ -310,13 +335,16 @@ class KheopsClient:
         studies = dicomize_json_results(studies)
         df = dicoms_to_frame(studies, keywords=self.STUDY_KEYS)
         df = sort_frame_by_uid(df, by="StudyInstanceUID")
+        df = strip_strings(df=df)
         return df
 
     def _retrieve_single_series(self,
                                 study_uid,
                                 series_uid,
-                                meta_only):
+                                meta_only,
+                                suppress_progress=False):
         progress = self._get_progress(label="Downloading series...",
+                                      suppress_progress=suppress_progress,
                                       threaded=True)
         progress.start()
         if meta_only:
@@ -336,8 +364,11 @@ class KheopsClient:
 
     def _retrieve_single_study(self,
                                study_uid,
-                               meta_only):
+                               meta_only,
+                               suppress_progress=False):
+
         progress = self._get_progress(label="Downloading study...",
+                                      suppress_progress=suppress_progress,
                                       threaded=True)
         progress.start()
         if meta_only:
@@ -358,12 +389,14 @@ class KheopsClient:
                      fuzzy=True,
                      limit=None,
                      offset=None,
+                     in_file=None,
                      out_dir=None):
         self._logger.info("List studies...")
         df = self._query_studies(search_filters=search_filters,
                                  fuzzy=fuzzy,
                                  limit=limit,
-                                 offset=offset)
+                                 offset=offset,
+                                 in_file=in_file)
         self._print_list(lst=df["StudyInstanceUID"],
                          label="Available studies")
         self._print_table_summary(df)
@@ -376,12 +409,14 @@ class KheopsClient:
                     fuzzy=True,
                     limit=None,
                     offset=None,
+                    in_file=None,
                     out_dir=None):
         self._logger.info("List series...")
         df = self._query_series(search_filters=search_filters,
                                 fuzzy=fuzzy,
                                 limit=limit,
-                                offset=offset)
+                                offset=offset,
+                                in_file=in_file)
         self._print_list(lst=df["SeriesInstanceUID"],
                          label="Available series")
         self._print_table_summary(df)
@@ -443,6 +478,7 @@ class KheopsClient:
                                     fuzzy=True,
                                     limit=None,
                                     offset=None,
+                                    in_file=None,
                                     out_dir=None,
                                     forced=False):
         """
@@ -455,6 +491,10 @@ class KheopsClient:
             fuzzy:         Enable fuzzy search semantics
             limit:         Limit the number or results
             offset:        Number of results that should be skipped
+            in_file:       Path to a table containing the studies to download.
+                           The table must provide a column "StudyInstanceUID".
+                           Query arguments (search_filters, limit, etc.) will
+                           be ignored if in_file is not None.
             out_dir:       Output directory
             forced:        Do not overwrite any existing files / folders
 
@@ -463,7 +503,8 @@ class KheopsClient:
         df = self._query_studies(search_filters=search_filters,
                                  fuzzy=fuzzy,
                                  limit=limit,
-                                 offset=offset)
+                                 offset=offset,
+                                 in_file=in_file)
         self._logger.info("Number of studies found: %d", len(df))
         if len(df)==0:
             return
@@ -473,7 +514,8 @@ class KheopsClient:
         for i, row  in df.iterrows():
             study_uid = row["StudyInstanceUID"]
             dicoms = self._retrieve_single_study(study_uid=study_uid,
-                                                 meta_only=meta_only)
+                                                 meta_only=meta_only,
+                                                 suppress_progress=True)
             progress.update(i)
             df = self._write_instances(out_dir=out_dir,
                                        instances=dicoms,
@@ -497,6 +539,7 @@ class KheopsClient:
                                    fuzzy=True,
                                    limit=None,
                                    offset=None,
+                                   in_file=None,
                                    out_dir=None,
                                    forced=False):
         """
@@ -509,6 +552,11 @@ class KheopsClient:
             fuzzy:         Enable fuzzy search semantics
             limit:         Limit the number or results
             offset:        Number of results that should be skipped
+            in_file:       Path to a table containing the studies to download.
+                           The table must provide columns "StudyInstanceUID"
+                           and "SeriesInstanceUID". Query arguments (e.g.,
+                           search_filters, limit, etc.) will be ignored if
+                           in_file is not None.
             out_dir:       Output directory
             forced:        Do not overwrite any existing files / folders
 
@@ -517,7 +565,8 @@ class KheopsClient:
         df = self._query_series(search_filters=search_filters,
                                 fuzzy=fuzzy,
                                 limit=limit,
-                                offset=offset)
+                                offset=offset,
+                                in_file=in_file)
         self._logger.info("Number of series found: %d", len(df))
         if len(df) == 0:
             return
@@ -530,7 +579,8 @@ class KheopsClient:
             series_uid = row["SeriesInstanceUID"]
             dicoms = self._retrieve_single_series(study_uid=study_uid,
                                                   series_uid=series_uid,
-                                                  meta_only=meta_only)
+                                                  meta_only=meta_only,
+                                                  suppress_progress=True)
             progress.update(i)
             df = self._write_instances(out_dir=out_dir,
                                        instances=dicoms,

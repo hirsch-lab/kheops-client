@@ -106,3 +106,14 @@ def sizeof_fmt(size, suffix="b"):
             return "%3.1f%s%s" % (size, unit, suffix)
         size /= 1024.0
     return "%.1f%s%s" % (size, "Y", suffix)
+
+
+def strip_strings(df, cols=None):
+    if cols is None:
+        cols = df.columns
+    for c in cols:
+        try:
+            df[c] = df[c].str.strip()
+        except AttributeError:
+            pass
+    return df
