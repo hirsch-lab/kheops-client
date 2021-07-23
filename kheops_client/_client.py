@@ -22,11 +22,12 @@ class KheopsClient:
     summary .csv files.
     """
     STUDY_KEYS = ["StudyInstanceUID", "PatientID",
-                  "StudyDate", "ModalitiesInStudy"]
+                  "StudyDate", "StudyTime", "ModalitiesInStudy"]
     SERIES_KEYS = ["StudyInstanceUID", "SeriesInstanceUID",
-                   "PatientID", "SeriesDate", "Modality", "RetrieveURL"]
+                   "PatientID", "SeriesDate", "SeriesTime",
+                   "Modality", "RetrieveURL"]
     INSTANCE_KEYS = ["StudyInstanceUID", "SeriesInstanceUID", "SOPInstanceUID",
-                     "PatientID", "SeriesDate", "Modality"]
+                     "PatientID", "SeriesDate", "SeriesTime", "Modality"]
     MAX_ROWS_PRINTED = 25
 
     def __init__(self,
@@ -311,6 +312,7 @@ class KheopsClient:
         series = pd.concat(series, axis=0)
         series = sort_frame_by_uid(series, by="SeriesInstanceUID")
         series = strip_strings(df=series)
+        series = format_date_time(df=series, mode="series")
         return series
 
     def _query_studies(self,
@@ -336,6 +338,7 @@ class KheopsClient:
         df = dicoms_to_frame(studies, keywords=self.STUDY_KEYS)
         df = sort_frame_by_uid(df, by="StudyInstanceUID")
         df = strip_strings(df=df)
+        df = format_date_time(df=df, mode="studies")
         return df
 
     def _retrieve_single_series(self,

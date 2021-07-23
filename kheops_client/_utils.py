@@ -117,3 +117,37 @@ def strip_strings(df, cols=None):
         except AttributeError:
             pass
     return df
+
+
+def format_date_time(df, mode, drop=False, ignore_time_nan=False):
+    """
+    How the data availability is resolved:
+        date:yes, time:yes      => datetime (with date and time)
+        date:yes, time:no       => datetime (with date and time=00:00:00)
+        date:no,  time:yes      => nan
+        date:no,  time:no       => nan
+
+    To always return nan if time:no, set the flag ignore_time_nan to True.
+    """
+    assert mode in ("series", "studies")
+    if mode == "series":
+        col_date, col_time = "SeriesDate", "SeriesTime"
+        col_datetime = "SeriesDateTime"
+    elif mode == "studies":
+        col_date, col_time = "StudyDate", "StudyTime"
+        col_datetime = "StudyDateTime"
+    date = df.get(col_date, default=pd.Series(index=df.index, dtype=str))
+    time = df.get(col_time, default=pd.Series(index=df.index, dtype=str))
+    if ignore_time_nan:
+        time = time.fillna("")
+    if col_time in df:
+        # Insert right of time column
+        col_idx = df.columns.get_loc(col_time)+1
+    else:
+        # Insert at the end
+        col_idx = len(df.columns)
+    dt = pd.to_datetime((date+" "+time).str.strip(), errors="coerce")
+    df.insert(loc=col_idx, column=col_datetime, value=dt)
+    if drop:
+        df = df.drop([col_date, col_time], axis=1, errors="ignore")
+    return df
