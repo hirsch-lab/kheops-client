@@ -151,9 +151,10 @@ kheops-client download studies \
 - Control the verbosity level by using the flag `--verbosity` multiple times. Or by using the short form: `-v`, `-vv`, `-vvv`.
 
 ### Python API
-The above functionality is implemented in [KheopsClient](https://github.com/hirsch-lab/kheops-client/blob/main/kheops_client/client.py).
+The above functionality is implemented in [KheopsClient](https://github.com/hirsch-lab/kheops-client/blob/main/kheops_client/_client.py).
 
 ```python
+from kheops_client import KheopsClient
 client = KheopsClient(url="URL", access_token="ACCESS_TOKEN")
 client.list_studies(...)
 client.list_series(...)
