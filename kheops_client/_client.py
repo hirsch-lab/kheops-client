@@ -168,6 +168,7 @@ class KheopsClient:
         file_sizes = df.get("FileSize", empty.copy()).sum()
         modalities1 = df.get("Modality", empty.copy()).unique()
         modalities2 = df.get("ModalitiesInStudy", empty.copy())
+        modalities2 = modalities2.fillna("<N/A>")
         # modalities2 can have the following shape:
         #       [ ["CT", "XA"], "CT", ["MR", "CT"] ]
         # Note the mixing of lists and strings. To be correct: it's not
